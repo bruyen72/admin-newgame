@@ -1,0 +1,1589 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importar Questões via Excel - Quiron Admin</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        /* ── HEADER ── */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .header h1 { font-size: 22px; display: flex; align-items: center; gap: 12px; }
+        .btn {
+            padding: 9px 18px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+        .btn-secondary { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); }
+        .btn-secondary:hover { background: rgba(255,255,255,0.35); }
+        .btn-white { background: white; color: #667eea; font-weight: 700; }
+        .btn-white:hover { background: #f0f4ff; }
+        .btn-green { background: #10b981; color: white; }
+        .btn-green:hover { background: #059669; }
+        .btn-purple { background: #667eea; color: white; }
+        .btn-purple:hover { background: #5a67d8; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ── LAYOUT ── */
+        .container { max-width: 1000px; margin: 30px auto; padding: 0 20px 40px; }
+
+        /* ── SYSTEM TABS ── */
+        .tabs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .tab-card {
+            background: white;
+            border: 3px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.25s;
+            text-align: center;
+        }
+        .tab-card:hover { border-color: #667eea; box-shadow: 0 4px 20px rgba(102,126,234,0.15); }
+        .tab-card.active { border-color: #667eea; background: linear-gradient(135deg,#f0f4ff,#f5f0ff); box-shadow: 0 4px 20px rgba(102,126,234,0.2); }
+        .tab-card .icon { font-size: 40px; margin-bottom: 12px; }
+        .tab-card h3 { font-size: 17px; color: #1e293b; margin-bottom: 8px; }
+        .tab-card p { font-size: 13px; color: #64748b; line-height: 1.5; }
+        .tab-card .badge { display: inline-block; margin-top: 10px; padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        .badge-react { background: #dbeafe; color: #1d4ed8; }
+        .badge-game { background: #fce7f3; color: #be185d; }
+
+        /* ── CARDS ── */
+        .card {
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            padding: 28px;
+            margin-bottom: 20px;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 18px;
+            padding-bottom: 14px;
+            border-bottom: 2px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ── FORM ── */
+        .form-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 180px; }
+        .form-group label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; }
+        .form-group input, .form-group select {
+            padding: 10px 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #1e293b;
+            background: white;
+            transition: border-color 0.15s;
+            width: 100%;
+        }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #667eea; }
+
+        /* ── STATUS ── */
+        .status-box {
+            padding: 11px 16px;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-top: 12px;
+        }
+        .status-ok { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+        .status-err { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+        .status-info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+        .status-warn { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+
+        /* ── DB STATS ── */
+        .db-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+        .db-stat { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 18px; text-align: center; flex: 1; min-width: 100px; }
+        .db-stat .val { font-size: 24px; font-weight: 800; color: #667eea; }
+        .db-stat .lbl { font-size: 11px; color: #64748b; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.4px; }
+
+        /* ── DROP ZONE ── */
+        .drop-zone {
+            border: 3px dashed #d1d5db;
+            border-radius: 14px;
+            padding: 44px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fafafa;
+        }
+        .drop-zone:hover, .drop-zone.over { border-color: #667eea; background: #f0f4ff; }
+        .drop-zone .icon { font-size: 44px; margin-bottom: 12px; }
+        .drop-zone p { color: #64748b; font-size: 14px; }
+        .drop-zone strong { color: #1e293b; }
+
+        /* ── NOVO TÓPICO / ÁREA ── */
+        .extra-block {
+            margin-top: 16px;
+            padding: 16px;
+            background: #fafafa;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+        }
+        .extra-block .block-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #64748b;
+            margin-bottom: 12px;
+        }
+        .hidden { display: none; }
+
+        /* ── COL MAPPER ── */
+        .col-map-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+        .col-map-item { display: flex; flex-direction: column; gap: 4px; }
+        .col-map-item label { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.4px; }
+        .col-map-item select {
+            padding: 8px 10px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 7px;
+            font-size: 13px;
+            color: #1e293b;
+        }
+        .col-map-item select:focus { outline: none; border-color: #667eea; }
+        .req-star { color: #ef4444; }
+
+        /* ── PREVIEW TABLE ── */
+        .table-wrap { overflow-x: auto; max-height: 380px; overflow-y: auto; border-radius: 10px; border: 1px solid #e5e7eb; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background: #f8fafc; padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: #64748b; border-bottom: 2px solid #e5e7eb; position: sticky; top: 0; }
+        td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; color: #374151; vertical-align: top; }
+        tr:hover td { background: #fafbff; }
+
+        /* ── PREVIEW STATS ── */
+        .prev-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+        .prev-stat { flex: 1; min-width: 100px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center; }
+        .prev-stat .val { font-size: 26px; font-weight: 800; }
+        .prev-stat .lbl { font-size: 11px; color: #64748b; margin-top: 2px; }
+        .c-blue { color: #3b82f6; } .c-green { color: #10b981; } .c-yellow { color: #f59e0b; } .c-red { color: #ef4444; }
+
+        /* ── BADGE ── */
+        .bdg { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+        .bdg-ok { background: #d1fae5; color: #065f46; }
+        .bdg-err { background: #fee2e2; color: #991b1b; }
+        .bdg-dup { background: #fef3c7; color: #92400e; }
+        .bdg-gab { background: #dbeafe; color: #1e40af; }
+        .certo { color: #10b981; font-weight: 700; }
+        .errado { color: #ef4444; font-weight: 700; }
+
+        /* ── PROGRESS ── */
+        .progress-bar { width: 100%; height: 28px; background: #e5e7eb; border-radius: 14px; overflow: hidden; margin: 14px 0; }
+        .progress-fill {
+            height: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%; transition: width 0.3s;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: 700; font-size: 13px;
+        }
+        .log-box {
+            background: #1f2937; color: #10b981; padding: 16px; border-radius: 10px;
+            font-family: 'Courier New', monospace; font-size: 12px;
+            max-height: 260px; overflow-y: auto; margin-top: 16px; line-height: 1.7;
+        }
+        .log-line { margin: 2px 0; }
+        .log-ok { color: #10b981; } .log-err { color: #ef4444; } .log-info { color: #60a5fa; } .log-warn { color: #fbbf24; }
+
+        /* ── ACTION BUTTONS ── */
+        .actions { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+        .btn-large { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; min-width: 160px; }
+        .btn-import { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-import:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102,126,234,0.35); }
+        .btn-import:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-outline { background: white; color: #667eea; border: 2px solid #667eea; }
+        .btn-outline:hover { background: #f0f4ff; }
+        .btn-cancel { background: #f1f5f9; color: #475569; }
+        .btn-cancel:hover { background: #e2e8f0; }
+
+        .sep { height: 1px; background: #f1f5f9; margin: 16px 0; }
+        .info-note { display: flex; gap: 10px; align-items: flex-start; padding: 12px 16px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 9px; font-size: 13px; color: #1e40af; margin-bottom: 16px; }
+
+        .guide-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .guide-box { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; }
+        .guide-box h4 { font-size: 13px; color: #334155; margin-bottom: 8px; }
+        .guide-box p { font-size: 13px; color: #475569; line-height: 1.5; margin-bottom: 8px; }
+        .guide-list { margin: 0; padding-left: 18px; color: #475569; }
+        .guide-list li { margin: 6px 0; font-size: 13px; }
+        .guide-code { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 10px; font-family: Consolas, 'Courier New', monospace; font-size: 12px; overflow-x: auto; }
+
+        /* Dark theme */
+        body {
+            background: radial-gradient(1200px 600px at 10% -20%, #1c2333 0%, #0b0e14 55%, #080a0f 100%);
+            color: #e5e7eb;
+        }
+        .card {
+            background: #11151d;
+            border: 1px solid #202633;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+        }
+        .card-title { color: #f3f4f6; border-bottom-color: #242c3a; }
+        .tab-card {
+            background: #0f141d;
+            border-color: #2a3343;
+        }
+        .tab-card h3 { color: #f3f4f6; }
+        .tab-card p { color: #9ca3af; }
+        .tab-card.active {
+            background: linear-gradient(135deg, #182033, #1b1530);
+            border-color: #5b79ff;
+        }
+        .form-group label { color: #9ca3af; }
+        .form-group input, .form-group select {
+            background: #0d131c;
+            color: #e5e7eb;
+            border-color: #2a3343;
+        }
+        .form-group input:focus, .form-group select:focus { border-color: #7f9bff; }
+        .db-stat, .prev-stat, .guide-box, .extra-block {
+            background: #0f141d;
+            border-color: #2a3343;
+        }
+        .db-stat .lbl, .prev-stat .lbl, .guide-box p, .guide-list { color: #9ca3af; }
+        .drop-zone {
+            background: #0d131c;
+            border-color: #344057;
+        }
+        .drop-zone p { color: #9ca3af; }
+        .drop-zone strong { color: #e5e7eb; }
+        .table-wrap { border-color: #2a3343; }
+        th {
+            background: #0f141d;
+            color: #9ca3af;
+            border-bottom-color: #2a3343;
+        }
+        td { color: #e5e7eb; border-bottom-color: #1f2735; }
+        tr:hover td { background: #121a27; }
+        .btn-outline {
+            background: #0d131c;
+            color: #9eb5ff;
+            border-color: #5b79ff;
+        }
+        .btn-outline:hover { background: #172036; }
+        .btn-cancel { background: #1b2230; color: #d1d5db; }
+        .btn-cancel:hover { background: #232c3d; }
+        .sep { background: #242c3a; }
+        .info-note {
+            background: #0f1c33;
+            border-color: #2e4f8f;
+            color: #9ec4ff;
+        }
+
+        @media (max-width: 900px) {
+            .guide-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>📤 Importar Questões via Excel</h1>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-white" onclick="downloadTemplate()">📥 Baixar Template</button>
+        <button class="btn btn-secondary" onclick="location.href='dashboard.html'">← Voltar</button>
+    </div>
+</div>
+
+<div class="container">
+
+    <!-- PASSO 1: ESCOLHER SISTEMA -->
+    <div class="card" id="stepSystem">
+        <div class="card-title">1️⃣ Escolha o Sistema de Importação</div>
+        <div class="tabs">
+            <div class="tab-card" id="tabReact" onclick="selectSystem('react')">
+                <div class="icon">📝</div>
+                <h3>Questões de Estudo (A/B/C/D)</h3>
+                <p>Múltipla escolha com 4 ou 5 alternativas.<br>Tabela: <code>questoes_react_dados</code></p>
+                <span class="badge badge-react">React / Estudo</span>
+            </div>
+            <div class="tab-card" id="tabGame" onclick="selectSystem('game')">
+                <div class="icon">🎮</div>
+                <h3>Jogo 3D (Certo / Errado)</h3>
+                <p>Afirmações julgadas como verdadeiras ou falsas.<br>Tabela: <code>game_questions</code></p>
+                <span class="badge badge-game">Jogo 3D</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" id="quickGuide">
+        <div class="card-title">Guia rapido: importar Excel sem erro</div>
+        <div class="guide-grid">
+            <div class="guide-box">
+                <h4>Fluxo curto (6 passos)</h4>
+                <ol class="guide-list">
+                    <li>Escolha React (A/B/C/D) ou Jogo 3D (Certo/Errado).</li>
+                    <li>Cole a Service Role Key e clique em Conectar.</li>
+                    <li>Defina Area/Materia/Topico padrao no passo 3.</li>
+                    <li>Envie o arquivo .xlsx/.xls (linha 1 = cabecalho).</li>
+                    <li>Revise o mapeamento e clique em Aplicar e Ver Preview.</li>
+                    <li>Importe apenas quando "Prontas" for maior que zero.</li>
+                </ol>
+            </div>
+            <div class="guide-box">
+                <h4>React: 2 formatos aceitos</h4>
+                <p>Voce pode usar qualquer um dos formatos abaixo:</p>
+                <div class="guide-code">Formato 1 (colunas): enunciado | A | B | C | D | E | gabarito | explicacao</div>
+                <div class="guide-code" style="margin-top:8px">Formato 2 (JSON): enunciado | alternativas | gabarito | explicacao<br>Exemplo JSON: {"A":"opcao A","B":"opcao B","C":"opcao C","D":"opcao D","E":"opcional"}</div>
+                <p style="margin-top:8px">Se usar JSON, A/B/C/D sao obrigatorias. E e opcional.</p>
+            </div>
+        </div>
+        <div class="sep"></div>
+        <div class="guide-grid">
+            <div class="guide-box">
+                <h4>Game 3D: formato aceito</h4>
+                <p>Use no minimo: <code>enunciado</code> e <code>gabarito</code>. <code>explicacao</code> e opcional.</p>
+                <div class="guide-code">Gabarito aceito: certo, errado, true, false, 1, 0, v, f</div>
+                <p style="margin-top:8px">A area pode vir por linha (coluna <code>area_id</code>) ou pela configuracao global (passo 3).</p>
+            </div>
+            <div class="guide-box">
+                <h4>Regras para planilha gerada por IA/Figma</h4>
+                <ul class="guide-list">
+                    <li>Linha 1 deve ser cabecalho fixo (sem coluna vazia).</li>
+                    <li>React: gabarito deve ser A, B, C, D ou E.</li>
+                    <li>Game: gabarito deve ser certo/errado (ou true/false, 1/0).</li>
+                    <li>Se usar <code>alternativas</code>, o JSON precisa estar valido.</li>
+                    <li>Nao misture colunas com nomes diferentes na mesma planilha.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- PASSO 2: CONEXÃO -->
+    <div class="card hidden" id="stepConn">
+        <div class="card-title">2️⃣ Conexão com o Banco</div>
+        <div class="form-row">
+            <div class="form-group" style="flex:3">
+                <label>Service Role Key</label>
+                <input type="password" id="serviceKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." autocomplete="off">
+            </div>
+            <button class="btn btn-purple" style="padding:10px 20px;align-self:flex-end" onclick="connect()">🔌 Conectar</button>
+        </div>
+        <div id="connMsg"></div>
+        <div id="dbStatsWrap" class="hidden">
+            <div class="db-stats" id="dbStats"></div>
+        </div>
+    </div>
+
+    <!-- PASSO 3: ÁREA / MATÉRIA / TÓPICO -->
+    <div class="card hidden" id="stepConfig">
+        <div class="card-title">3️⃣ Configuração Global <small style="font-weight:400;color:#94a3b8;font-size:13px">(padrão para linhas sem essas colunas no Excel)</small></div>
+
+        <div class="info-note">
+            💡 Se o seu Excel já tiver colunas de área/matéria/tópico, elas serão usadas por linha. Aqui você define o padrão global.
+        </div>
+
+        <!-- React config -->
+        <div id="configReact">
+            <div class="form-row" style="margin-bottom:14px">
+                <div class="form-group">
+                    <label>Área</label>
+                    <select id="cfgArea" onchange="onAreaChange()">
+                        <option value="">-- selecione --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Matéria</label>
+                    <select id="cfgMateria" onchange="onMateriaChange()">
+                        <option value="">-- selecione área primeiro --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tópico</label>
+                    <select id="cfgTopico" onchange="onTopicoChange()">
+                        <option value="">-- selecione matéria primeiro --</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="extra-block hidden" id="novoTopicoBlock">
+                <div class="block-label">➕ Novo Tópico / Matéria</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>materia_id (slug)</label>
+                        <input type="text" id="cfgMateriaId" placeholder="direito-civil">
+                    </div>
+                    <div class="form-group">
+                        <label>materia (nome)</label>
+                        <input type="text" id="cfgMateriaNome" placeholder="Direito Civil">
+                    </div>
+                    <div class="form-group">
+                        <label>topico (slug)</label>
+                        <input type="text" id="cfgTopicoSlug" placeholder="contratos">
+                    </div>
+                    <div class="form-group">
+                        <label>topico_nome (nome)</label>
+                        <input type="text" id="cfgTopicoNome" placeholder="Contratos">
+                    </div>
+                </div>
+            </div>
+
+            <div class="extra-block hidden" id="novaAreaBlock">
+                <div class="block-label">🌐 Nova Área</div>
+                <div class="form-row">
+                    <div class="form-group"><label>area_id</label><input type="text" id="cfgAreaId" placeholder="tributaria"></div>
+                    <div class="form-group"><label>area</label><input type="text" id="cfgAreaNome" placeholder="Tributária"></div>
+                    <div class="form-group"><label>materia_id</label><input type="text" id="cfgAreaMId" placeholder="direito-tributario"></div>
+                    <div class="form-group"><label>materia</label><input type="text" id="cfgAreaMNome" placeholder="Direito Tributário"></div>
+                    <div class="form-group"><label>topico</label><input type="text" id="cfgAreaTSlug" placeholder="principios"></div>
+                    <div class="form-group"><label>topico_nome</label><input type="text" id="cfgAreaTNome" placeholder="Princípios"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game config -->
+        <div id="configGame" class="hidden">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Área (area_id)</label>
+                    <select id="cfgGameArea" onchange="onGameAreaChange()">
+                        <option value="">-- selecione --</option>
+                        <option value="juridica">Jurídica</option>
+                        <option value="policial">Policial</option>
+                        <option value="fiscal-bancaria">Fiscal-Bancária</option>
+                        <option value="conhecimentos-gerais">Conhecimentos Gerais</option>
+                        <option value="__nova__">Nova area...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Matéria (subject_id, slug)</label>
+                    <input type="text" id="cfgGameSubject" placeholder="direito-constitucional" oninput="updateGameSummary()">
+                </div>
+                <div class="form-group">
+                    <label>Dificuldade padrão</label>
+                    <select id="cfgGameDiff" onchange="updateGameSummary()">
+                        <option value="facil">Fácil</option>
+                        <option value="medio" selected>Médio</option>
+                        <option value="dificil">Difícil</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tema/Tópico (theme_id, opcional)</label>
+                    <input type="text" id="cfgGameTheme" placeholder="principios-constitucionais" oninput="updateGameSummary()">
+                </div>
+            </div>
+            <div class="extra-block hidden" id="novaGameAreaBlock">
+                <div class="block-label">Nova area no Game 3D</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>area_id (slug)</label>
+                        <input type="text" id="cfgGameAreaNovoId" placeholder="nova-area" oninput="updateGameSummary()">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="cfgSummary" style="margin-top:12px"></div>
+    </div>
+
+    <!-- PASSO 4: UPLOAD -->
+    <div class="card hidden" id="stepUpload">
+        <div class="card-title">4️⃣ Arquivo Excel</div>
+        <div class="drop-zone" id="dropZone"
+             onclick="document.getElementById('fileInput').click()"
+             ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+            <div class="icon">📊</div>
+            <p><strong>Clique ou arraste o arquivo aqui</strong></p>
+            <p style="margin-top:8px;font-size:13px">Aceita .xlsx e .xls — Linha 1 = cabeçalho</p>
+        </div>
+        <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" onchange="handleFile(event)">
+        <div id="fileMsg"></div>
+        <div class="actions hidden" id="quickActions">
+            <button class="btn-large btn-import" style="flex:none;padding:12px 24px" onclick="quickTemplateFlow()">⚡ Modo rápido (template oficial)</button>
+        </div>
+    </div>
+
+    <!-- PASSO 5: MAPEAMENTO -->
+    <div class="card hidden" id="stepMap">
+        <div class="card-title">5️⃣ Mapeamento de Colunas</div>
+        <p style="font-size:13px;color:#64748b;margin-bottom:16px">
+            Selecione qual coluna do seu Excel corresponde a cada campo. Campos sem coluna usam a configuração global.
+        </p>
+        <div class="col-map-grid" id="colMapGrid"></div>
+        <div class="actions">
+            <button class="btn-large btn-import" style="flex:none;padding:12px 28px" onclick="applyMap()">✅ Aplicar e Ver Preview</button>
+            <button class="btn-large btn-outline" style="flex:none;padding:12px 24px" onclick="autoDetect()">🤖 Auto-detectar</button>
+            <button class="btn-large btn-outline" style="flex:none;padding:12px 24px" onclick="applyOfficialTemplateMap()">🧩 Usar template oficial</button>
+        </div>
+    </div>
+
+    <!-- PASSO 6: PREVIEW -->
+    <div class="card hidden" id="stepPreview">
+        <div class="card-title">6️⃣ Preview</div>
+        <div class="prev-stats" id="prevStats"></div>
+        <div id="prevWarn"></div>
+        <div class="table-wrap">
+            <table>
+                <thead id="prevHead"></thead>
+                <tbody id="prevBody"></tbody>
+            </table>
+        </div>
+        <p style="font-size:12px;color:#94a3b8;margin-top:8px">Exibindo primeiras 50 linhas.</p>
+        <div class="actions">
+            <button class="btn-large btn-import" id="btnImport" onclick="startImport()">⚡ Importar</button>
+            <button class="btn-large btn-cancel" onclick="resetAll()">🔄 Reiniciar</button>
+        </div>
+    </div>
+
+    <!-- PASSO 7: PROGRESSO -->
+    <div class="card hidden" id="stepProgress">
+        <div class="card-title" id="progressTitle">📊 Importando...</div>
+        <div class="progress-bar"><div class="progress-fill" id="pBar">0%</div></div>
+        <p id="pText" style="text-align:center;color:#64748b;font-size:13px;margin-bottom:10px"></p>
+        <div class="log-box" id="logBox"></div>
+        <div id="importDone" class="hidden" style="margin-top:20px">
+            <div class="actions">
+                <button class="btn-large btn-outline" onclick="connect()">🔄 Ver Stats Atualizados</button>
+                <button class="btn-large btn-cancel" onclick="resetAll()">📊 Nova Importação</button>
+                <button class="btn-large btn-cancel" onclick="location.href='dashboard.html'">← Dashboard</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ==============================
+// ESTADO GLOBAL
+// ==============================
+const SUPABASE_URL = 'https://lrmabyfaunhrdvdzocrz.supabase.co';
+let sb = null;
+let system = null;       // 'react' | 'game'
+let treeData = [];       // react tree
+let excelHeaders = [];
+let excelRows = [];
+let colMap = {};
+let mappedRows = [];
+let existingIds = new Set();
+
+if (localStorage.getItem('quiron_admin_logged') !== 'true') {
+    window.location.href = 'index.html';
+}
+
+const GAME_AREA_LABELS = {
+    'juridica': 'juridica',
+    'policial': 'policial',
+    'fiscal-bancaria': 'fiscal-bancaria',
+    'conhecimentos-gerais': 'conhecimentos-gerais',
+    'sem-area': 'sem-area'
+};
+
+function normalizeGameArea(areaId) {
+    if (!areaId) return 'sem-area';
+    const v = norm(String(areaId)).replace(/_/g, '-');
+    if (!v) return 'sem-area';
+    if (v === 'gerais' || v === 'geral' || v.includes('conhecimentos')) return 'conhecimentos-gerais';
+    if (v.includes('jurid')) return 'juridica';
+    if (v.includes('polic')) return 'policial';
+    if (v.includes('fiscal') || v.includes('banc')) return 'fiscal-bancaria';
+    return v;
+}
+
+function gameAreaLabel(areaId) {
+    return GAME_AREA_LABELS[areaId] || areaId;
+}
+
+async function fetchAllGameAreaCounts() {
+    const counts = {};
+    let from = 0;
+    const chunk = 1000;
+
+    for (;;) {
+        const { data, error } = await sb
+            .from('game_questions')
+            .select('area_id')
+            .not('area_id', 'is', null)
+            .range(from, from + chunk - 1);
+
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+
+        data.forEach((row) => {
+            const k = normalizeGameArea(row.area_id);
+            counts[k] = (counts[k] || 0) + 1;
+        });
+
+        if (data.length < chunk) break;
+        from += chunk;
+    }
+
+    return counts;
+}
+
+// ==============================
+// PASSO 1: SISTEMA
+// ==============================
+function selectSystem(s) {
+    system = s;
+    document.getElementById('tabReact').classList.toggle('active', s === 'react');
+    document.getElementById('tabGame').classList.toggle('active', s === 'game');
+    show('stepConn');
+    // Mostrar config correta quando conectar
+    document.getElementById('configReact').classList.toggle('hidden', s !== 'react');
+    document.getElementById('configGame').classList.toggle('hidden', s !== 'game');
+    document.getElementById('stepConn').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ==============================
+// PASSO 2: CONEXÃO
+// ==============================
+async function connect() {
+    const key = document.getElementById('serviceKey').value.trim();
+    if (!key) { msg('connMsg','err','Informe a Service Role Key'); return; }
+    msg('connMsg','info','🔄 Conectando...');
+    localStorage.setItem('quiron_service_key', key);
+
+    try {
+        sb = supabase.createClient(SUPABASE_URL, key);
+
+        if (system === 'react') {
+            const { data, error } = await sb.rpc('get_tree_questoes_dados');
+            if (error) throw error;
+            treeData = data || [];
+            const { count } = await sb.from('questoes_react_dados').select('*', { count:'exact', head:true });
+            const byArea = {};
+            treeData.forEach(r => { byArea[r.area] = (byArea[r.area]||0) + Number(r.qtd); });
+            document.getElementById('dbStats').innerHTML =
+                Object.entries(byArea).map(([a,q]) =>
+                    `<div class="db-stat"><div class="val">${q.toLocaleString()}</div><div class="lbl">${e(a)}</div></div>`
+                ).join('') + `<div class="db-stat"><div class="val" style="color:#10b981">${(count||0).toLocaleString()}</div><div class="lbl">Total</div></div>`;
+            msg('connMsg','ok',`✅ Conectado! ${(count||0).toLocaleString()} questões no banco, ${treeData.length} tópicos.`);
+            buildAreaDropdown();
+        } else {
+            const { count, error } = await sb.from('game_questions').select('*', { count:'exact', head:true });
+            if (error) throw error;
+            const byArea = await fetchAllGameAreaCounts();
+            const areaOrder = ['juridica', 'policial', 'fiscal-bancaria', 'conhecimentos-gerais', 'sem-area'];
+            const sortedEntries = Object.entries(byArea).sort((a, b) => {
+                const ia = areaOrder.indexOf(a[0]);
+                const ib = areaOrder.indexOf(b[0]);
+                const va = ia === -1 ? 999 : ia;
+                const vb = ib === -1 ? 999 : ib;
+                if (va !== vb) return va - vb;
+                return a[0].localeCompare(b[0]);
+            });
+            document.getElementById('dbStats').innerHTML =
+                sortedEntries.map(([a,q]) =>
+                    `<div class="db-stat"><div class="val" style="color:#be185d">${q.toLocaleString()}</div><div class="lbl">${e(gameAreaLabel(a))}</div></div>`
+                ).join('') + `<div class="db-stat"><div class="val" style="color:#10b981">${(count||0).toLocaleString()}</div><div class="lbl">Total</div></div>`;
+            msg('connMsg','ok',`✅ Conectado! ${(count||0).toLocaleString()} afirmações no jogo.`);
+        }
+
+        show('dbStatsWrap');
+        show('stepConfig');
+        show('stepUpload');
+        document.getElementById('stepConfig').scrollIntoView({ behavior:'smooth' });
+
+    } catch (err) {
+        msg('connMsg','err','❌ ' + err.message);
+        sb = null;
+    }
+}
+
+// ==============================
+// PASSO 3: CONFIGURAÇÃO REACT
+// ==============================
+function buildAreaDropdown() {
+    const areas = [...new Set(treeData.map(r => r.area))].sort();
+    const sel = document.getElementById('cfgArea');
+    sel.innerHTML = '<option value="">-- selecione a área --</option>';
+    areas.forEach(a => {
+        const aId = treeData.find(r => r.area === a)?.area_id || slug(a);
+        sel.innerHTML += `<option value="${aId}|${e(a)}">${e(a)}</option>`;
+    });
+    sel.innerHTML += '<option value="__nova__">➕ Nova Área...</option>';
+}
+
+function onAreaChange() {
+    const v = document.getElementById('cfgArea').value;
+    document.getElementById('novaAreaBlock').classList.toggle('hidden', v !== '__nova__');
+    const matSel = document.getElementById('cfgMateria');
+    matSel.innerHTML = '<option value="">-- selecione matéria --</option>';
+    document.getElementById('cfgTopico').innerHTML = '<option value="">-- selecione matéria --</option>';
+    if (!v || v === '__nova__') { updateReactSummary(); return; }
+    const [aId] = v.split('|');
+    const mats = [...new Map(treeData.filter(r => r.area_id === aId).map(r => [r.materia_id, r])).values()]
+        .sort((a,b) => a.materia.localeCompare(b.materia));
+    mats.forEach(r => { matSel.innerHTML += `<option value="${r.materia_id}|${e(r.materia)}">${e(r.materia)}</option>`; });
+    matSel.innerHTML += '<option value="__nova__">➕ Nova Matéria/Tópico...</option>';
+    updateReactSummary();
+}
+
+function onMateriaChange() {
+    const mv = document.getElementById('cfgMateria').value;
+    const av = document.getElementById('cfgArea').value;
+    document.getElementById('novoTopicoBlock').classList.add('hidden');
+    const topSel = document.getElementById('cfgTopico');
+    topSel.innerHTML = '<option value="">-- selecione tópico --</option>';
+    if (!mv || !av) { updateReactSummary(); return; }
+    if (mv === '__nova__') { document.getElementById('novoTopicoBlock').classList.remove('hidden'); updateReactSummary(); return; }
+    const [aId] = av.split('|');
+    const [mId] = mv.split('|');
+    const tops = treeData.filter(r => r.area_id === aId && r.materia_id === mId).sort((a,b) => a.topico_nome.localeCompare(b.topico_nome));
+    tops.forEach(r => { topSel.innerHTML += `<option value="${r.topico}|${e(r.topico_nome)}">${e(r.topico_nome)} (${r.qtd})</option>`; });
+    topSel.innerHTML += '<option value="__novo__">➕ Novo Tópico...</option>';
+    updateReactSummary();
+}
+
+function onTopicoChange() {
+    const tv = document.getElementById('cfgTopico').value;
+    document.getElementById('novoTopicoBlock').classList.toggle('hidden', tv !== '__novo__');
+    updateReactSummary();
+}
+
+function getReactCfg() {
+    const av = document.getElementById('cfgArea').value;
+    const mv = document.getElementById('cfgMateria').value;
+    const tv = document.getElementById('cfgTopico').value;
+    if (av === '__nova__') return {
+        area_id:    slug(document.getElementById('cfgAreaId').value.trim()),
+        area:       document.getElementById('cfgAreaNome').value.trim(),
+        materia_id: slug(document.getElementById('cfgAreaMId').value.trim()),
+        materia:    document.getElementById('cfgAreaMNome').value.trim(),
+        topico:     slug(document.getElementById('cfgAreaTSlug').value.trim()),
+        topico_nome:document.getElementById('cfgAreaTNome').value.trim(),
+    };
+    if (!av) return null;
+    const [area_id, area] = av.split('|');
+    if (mv === '__nova__' || mv === '') return {
+        area_id, area,
+        materia_id: slug(document.getElementById('cfgMateriaId').value.trim()),
+        materia:    document.getElementById('cfgMateriaNome').value.trim(),
+        topico:     slug(document.getElementById('cfgTopicoSlug').value.trim()),
+        topico_nome:document.getElementById('cfgTopicoNome').value.trim(),
+    };
+    const [materia_id, materia] = mv.split('|');
+    if (tv === '__novo__' || tv === '') return {
+        area_id, area, materia_id, materia,
+        topico:     slug(document.getElementById('cfgTopicoSlug').value.trim()),
+        topico_nome:document.getElementById('cfgTopicoNome').value.trim(),
+    };
+    const [topico, topico_nome] = tv.split('|');
+    return { area_id, area, materia_id, materia, topico, topico_nome };
+}
+
+function updateReactSummary() {
+    const c = getReactCfg();
+    if (!c) { document.getElementById('cfgSummary').innerHTML = ''; return; }
+    document.getElementById('cfgSummary').innerHTML =
+        `<div class="status-box status-info">📌 <strong>${e(c.area)}</strong> → <strong>${e(c.materia)}</strong> → <strong>${e(c.topico_nome)}</strong></div>`;
+}
+
+function getGameAreaId() {
+    const selected = document.getElementById('cfgGameArea').value;
+    if (selected === '__nova__') {
+        return slug(document.getElementById('cfgGameAreaNovoId').value.trim());
+    }
+    return selected;
+}
+
+function onGameAreaChange() {
+    const selected = document.getElementById('cfgGameArea').value;
+    const isNova = selected === '__nova__';
+    document.getElementById('novaGameAreaBlock').classList.toggle('hidden', !isNova);
+    updateGameSummary();
+}
+
+function updateGameSummary() {
+    const a = getGameAreaId();
+    const s = document.getElementById('cfgGameSubject').value;
+    const d = document.getElementById('cfgGameDiff').value;
+    if (!a) { document.getElementById('cfgSummary').innerHTML = ''; return; }
+    document.getElementById('cfgSummary').innerHTML =
+        `<div class="status-box status-info">📌 Área: <strong>${a}</strong>${s ? ` → matéria: <strong>${s}</strong>` : ''} | dific: <strong>${d}</strong></div>`;
+}
+
+// ==============================
+// PASSO 4: UPLOAD
+// ==============================
+function onDragOver(ev) { ev.preventDefault(); document.getElementById('dropZone').classList.add('over'); }
+function onDragLeave()  { document.getElementById('dropZone').classList.remove('over'); }
+function onDrop(ev) {
+    ev.preventDefault();
+    document.getElementById('dropZone').classList.remove('over');
+    const f = ev.dataTransfer.files[0];
+    if (f) processFile(f);
+}
+function handleFile(ev) { const f = ev.target.files[0]; if (f) processFile(f); }
+
+function processFile(file) {
+    if (!file.name.match(/\.(xlsx|xls)$/i)) { msg('fileMsg','err','❌ Só .xlsx ou .xls'); return; }
+    msg('fileMsg','info','🔄 Lendo arquivo...');
+    const r = new FileReader();
+    r.onload = (ev) => {
+        try {
+            const wb = XLSX.read(new Uint8Array(ev.target.result), { type:'array' });
+            const expected =
+                system === 'react'
+                    ? ['id','enunciado','a','b','c','d','alternativas','gabarito','explicacao']
+                    : system === 'game'
+                        ? ['id','enunciado','gabarito','explicacao','area_id','subject_id','dificuldade']
+                        : ['id','enunciado','gabarito','explicacao','alternativas','a','b','c','d','area_id','subject_id','dificuldade'];
+
+            const sheetScore = (sheetName) => {
+                const rawSheet = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header:1, defval:'' });
+                const headers = (rawSheet[0] || []).map(h => norm(String(h).trim()));
+                let score = 0;
+                expected.forEach((k) => {
+                    if (headers.includes(k)) score += 2;
+                });
+                if (system === 'react') {
+                    ['alternativa a','alternativa b','alternativa c','alternativa d','alt a','alt b','alt c','alt d']
+                        .forEach((k) => { if (headers.some(h => h === k || h.includes(k))) score += 1; });
+                } else if (system === 'game') {
+                    ['afirmacao','afirmação','subject','materia','matéria']
+                        .forEach((k) => { if (headers.some(h => h === k || h.includes(k))) score += 1; });
+                } else {
+                    ['alternativas','alternativa a','alternativa b','alternativa c','alternativa d','afirmacao','afirmação','subject_id','dificuldade']
+                        .forEach((k) => { if (headers.some(h => h === k || h.includes(k))) score += 1; });
+                }
+                return { sheetName, score, rawSheet };
+            };
+
+            const ranked = wb.SheetNames.map(sheetScore).sort((a,b) => b.score - a.score);
+            const picked = ranked[0];
+            const raw = picked.rawSheet;
+            if (raw.length < 2) { msg('fileMsg','err','❌ Arquivo vazio ou só cabeçalho'); return; }
+            excelHeaders = raw[0].map(h => String(h).trim());
+            if (!system) {
+                const inferred = inferSystemFromHeaders(excelHeaders.map(h => norm(h)));
+                if (inferred) selectSystem(inferred);
+            }
+            excelRows    = raw.slice(1).filter(r => r.some(c => String(c).trim()));
+            msg('fileMsg','ok', `✅ <strong>${e(file.name)}</strong> — aba <strong>${e(picked.sheetName)}</strong> — ${excelRows.length} linhas, ${excelHeaders.length} colunas`);
+            buildColMapper();
+            show('stepMap');
+            autoDetect();
+            const quick = applyOfficialTemplateMap(true);
+            if (quick.ok) {
+                show('quickActions');
+                quickTemplateFlow();
+                msg('fileMsg','ok', `✅ <strong>${e(file.name)}</strong> — aba <strong>${e(picked.sheetName)}</strong> — modo rápido aplicado automaticamente. Confira o preview abaixo.`);
+                return;
+            }
+            hide('quickActions');
+            document.getElementById('stepMap').scrollIntoView({ behavior:'smooth' });
+        } catch(err) { msg('fileMsg','err','❌ ' + err.message); }
+    };
+    r.readAsArrayBuffer(file);
+}
+
+// ==============================
+// PASSO 5: MAPEAMENTO
+// ==============================
+const FIELDS_REACT = [
+    { key:'id',         label:'ID (opcional)',         req:false },
+    { key:'enunciado',  label:'Enunciado',             req:true  },
+    { key:'alt_json',   label:'Alternativas JSON',     req:false },
+    { key:'alt_a',      label:'Alternativa A',         req:false },
+    { key:'alt_b',      label:'Alternativa B',         req:false },
+    { key:'alt_c',      label:'Alternativa C',         req:false },
+    { key:'alt_d',      label:'Alternativa D',         req:false },
+    { key:'alt_e',      label:'Alternativa E (opt)',   req:false },
+    { key:'gabarito',   label:'Gabarito (A/B/C/D/E)',  req:true  },
+    { key:'explicacao', label:'Explicação',            req:true  },
+    { key:'banca',      label:'Banca',                 req:false },
+    { key:'ano',        label:'Ano',                   req:false },
+    { key:'cargo',      label:'Cargo',                 req:false },
+    { key:'area_col',   label:'Área (por linha)',      req:false },
+    { key:'mat_col',    label:'Matéria (por linha)',   req:false },
+    { key:'top_col',    label:'Tópico (por linha)',    req:false },
+];
+const FIELDS_GAME = [
+    { key:'id',         label:'ID (opcional)',         req:false },
+    { key:'enunciado',  label:'Afirmação',             req:true  },
+    { key:'gabarito',   label:'Gabarito (certo/errado)',req:true },
+    { key:'explicacao', label:'Explicação',            req:false },
+    { key:'area_col',   label:'Área (por linha)',      req:false },
+    { key:'sub_col',    label:'Matéria (por linha)',   req:false },
+    { key:'theme_col',  label:'Tema/Topico (por linha)',req:false},
+    { key:'dif_col',    label:'Dificuldade (por linha)',req:false},
+    { key:'banca',      label:'Banca',                 req:false },
+    { key:'ano',        label:'Ano',                   req:false },
+    { key:'cargo',      label:'Cargo',                 req:false },
+];
+const AUTO_KW = {
+    id:        ['id','codigo','code'],
+    enunciado: ['enunciado','afirmacao','afirmação','questao','pergunta','texto','statement'],
+    alt_json:  ['alternativas','alternativa_json','alternativas_json','opcoes','opções'],
+    alt_a:     ['alternativa a','alt a','opcao a','letra a'],
+    alt_b:     ['alternativa b','alt b','opcao b','letra b'],
+    alt_c:     ['alternativa c','alt c','opcao c','letra c'],
+    alt_d:     ['alternativa d','alt d','opcao d','letra d'],
+    alt_e:     ['alternativa e','alt e','opcao e','letra e'],
+    gabarito:  ['gabarito','resposta','answer','correct','correta','gab','v/f','verdadeiro','falso'],
+    explicacao:['explicacao','explicação','explanation','justificativa','comentario'],
+    banca:     ['banca','organizacao','orgao'],
+    ano:       ['ano','year'],
+    cargo:     ['cargo','concurso'],
+    area_col:  ['area','área'],
+    mat_col:   ['materia','matéria','disciplina','subject','assunto'],
+    top_col:   ['topico','tópico','tema'],
+    sub_col:   ['materia','matéria','disciplina','subject'],
+    theme_col: ['theme','theme_id','tema','topico','tópico'],
+    dif_col:   ['dificuldade','difficulty','nivel'],
+};
+
+function buildColMapper() {
+    const fields = system === 'react' ? FIELDS_REACT : FIELDS_GAME;
+    const opts = '<option value="-1">— não usar —</option>' +
+        excelHeaders.map((h,i) => `<option value="${i}">${e(h)}</option>`).join('');
+    document.getElementById('colMapGrid').innerHTML = fields.map(f =>
+        `<div class="col-map-item">
+            <label>${e(f.label)}${f.req ? ' <span class="req-star">*</span>':''}</label>
+            <select id="cm_${f.key}">${opts}</select>
+         </div>`
+    ).join('');
+}
+
+function inferSystemFromHeaders(headersNorm) {
+    const hasAlternativasJson = headersNorm.includes('alternativas') || headersNorm.includes('alternativas_json');
+    const hasReactCore =
+        headersNorm.includes('enunciado') &&
+        headersNorm.includes('gabarito') &&
+        (hasAlternativasJson || (
+            headersNorm.includes('a') &&
+            headersNorm.includes('b') &&
+            headersNorm.includes('c') &&
+            headersNorm.includes('d')
+        ));
+
+    const hasGameCore =
+        headersNorm.includes('enunciado') &&
+        headersNorm.includes('gabarito') &&
+        (headersNorm.includes('area_id') || headersNorm.includes('subject_id') || headersNorm.includes('dificuldade'));
+
+    if (hasReactCore && !hasGameCore) return 'react';
+    if (hasGameCore && !hasReactCore) return 'game';
+    if (hasReactCore) return 'react';
+    if (hasGameCore) return 'game';
+    return null;
+}
+
+function autoDetect() {
+    const fields = system === 'react' ? FIELDS_REACT : FIELDS_GAME;
+    const nh = excelHeaders.map(h => norm(h));
+    const exactByKey = {
+        alt_a: 'a',
+        alt_b: 'b',
+        alt_c: 'c',
+        alt_d: 'd',
+        alt_e: 'e'
+    };
+    fields.forEach(f => {
+        let found = -1;
+
+        // Prioriza colunas com nome exato (A, B, C, D, E) para evitar conflito com "enunciado".
+        if (exactByKey[f.key]) {
+            found = nh.findIndex(h => h === exactByKey[f.key]);
+        }
+
+        const kws = AUTO_KW[f.key] || [f.key];
+        for (const kw of kws) {
+            if (found !== -1) break;
+            const idx = nh.findIndex(h => h === norm(kw) || h.includes(norm(kw)));
+            if (idx !== -1) { found = idx; break; }
+        }
+        const sel = document.getElementById(`cm_${f.key}`);
+        if (sel) sel.value = String(found);
+    });
+}
+
+function applyReactTemplateMap(silent = false) {
+    if (!excelHeaders.length) {
+        if (!silent) alert('Carregue um arquivo Excel primeiro.');
+        return { ok: false, missing: ['arquivo_excel'] };
+    }
+
+    const nh = excelHeaders.map(h => norm(h));
+    const pick = (aliases) => {
+        for (const a of aliases) {
+            const idx = nh.findIndex(h => h === norm(a));
+            if (idx !== -1) return idx;
+        }
+        return -1;
+    };
+
+    const fixed = {
+        id: pick(['id']),
+        enunciado: pick(['enunciado']),
+        alt_json: pick(['alternativas', 'alternativas_json', 'alternativa_json']),
+        alt_a: pick(['a', 'alternativa a', 'alt a', 'opcao a', 'letra a']),
+        alt_b: pick(['b', 'alternativa b', 'alt b', 'opcao b', 'letra b']),
+        alt_c: pick(['c', 'alternativa c', 'alt c', 'opcao c', 'letra c']),
+        alt_d: pick(['d', 'alternativa d', 'alt d', 'opcao d', 'letra d']),
+        alt_e: pick(['e', 'alternativa e', 'alt e', 'opcao e', 'letra e']),
+        gabarito: pick(['gabarito']),
+        explicacao: pick(['explicacao', 'explicação']),
+        banca: pick(['banca']),
+        ano: pick(['ano']),
+        cargo: pick(['cargo'])
+    };
+
+    Object.entries(fixed).forEach(([k, idx]) => {
+        const sel = document.getElementById(`cm_${k}`);
+        if (sel) sel.value = String(idx);
+    });
+
+    ['area_col', 'mat_col', 'top_col'].forEach((k) => {
+        const sel = document.getElementById(`cm_${k}`);
+        if (!sel) return;
+        if (k === 'area_col') sel.value = String(pick(['area', 'area_id']));
+        else if (k === 'mat_col') sel.value = String(pick(['materia', 'matéria', 'subject', 'subject_id']));
+        else sel.value = String(pick(['topico', 'tópico', 'tema']));
+    });
+
+    const missing = ['enunciado', 'gabarito', 'explicacao']
+        .filter((k) => fixed[k] === -1);
+    const hasAltJSON = fixed.alt_json !== -1;
+    const hasAltABCD = ['alt_a', 'alt_b', 'alt_c', 'alt_d'].every((k) => fixed[k] !== -1);
+    if (!hasAltJSON && !hasAltABCD) {
+        missing.push('alternativas (JSON) ou A/B/C/D');
+    }
+
+    if (missing.length) {
+        if (!silent) alert('Template React incompleto. Faltam colunas: ' + missing.join(', '));
+        return { ok: false, missing };
+    }
+    if (!silent) alert('Mapeamento React oficial aplicado.');
+    return { ok: true, missing: [] };
+}
+
+function applyGameTemplateMap(silent = false) {
+    if (!excelHeaders.length) {
+        if (!silent) alert('Carregue um arquivo Excel primeiro.');
+        return { ok: false, missing: ['arquivo_excel'] };
+    }
+
+    const nh = excelHeaders.map(h => norm(h));
+    const pick = (aliases) => {
+        for (const a of aliases) {
+            const idx = nh.findIndex(h => h === norm(a));
+            if (idx !== -1) return idx;
+        }
+        return -1;
+    };
+
+    const fixed = {
+        id: pick(['id']),
+        enunciado: pick(['enunciado', 'afirmacao', 'afirmação']),
+        gabarito: pick(['gabarito']),
+        explicacao: pick(['explicacao', 'explicação']),
+        area_col: pick(['area_id', 'area']),
+        sub_col: pick(['subject_id', 'materia', 'matéria']),
+        theme_col: pick(['theme_id', 'theme', 'tema', 'topico', 'tópico']),
+        dif_col: pick(['dificuldade']),
+        banca: pick(['banca']),
+        ano: pick(['ano']),
+        cargo: pick(['cargo'])
+    };
+
+    Object.entries(fixed).forEach(([k, idx]) => {
+        const sel = document.getElementById(`cm_${k}`);
+        if (sel) sel.value = String(idx);
+    });
+
+    const missing = ['enunciado', 'gabarito'].filter((k) => fixed[k] === -1);
+    if (missing.length) {
+        if (!silent) alert('Template Game incompleto. Faltam colunas: ' + missing.join(', '));
+        return { ok: false, missing };
+    }
+    if (!silent) alert('Mapeamento Game oficial aplicado.');
+    return { ok: true, missing: [] };
+}
+
+function applyOfficialTemplateMap(silent = false) {
+    if (!system && excelHeaders.length) {
+        const inferred = inferSystemFromHeaders(excelHeaders.map(h => norm(h)));
+        if (inferred) selectSystem(inferred);
+    }
+
+    if (system === 'react') {
+        return applyReactTemplateMap(silent);
+    }
+    if (system === 'game') {
+        return applyGameTemplateMap(silent);
+    }
+    if (!silent) alert('Selecione o sistema (React ou Jogo 3D) primeiro.');
+    return { ok: false, missing: ['sistema'] };
+}
+
+function quickTemplateFlow() {
+    const result = applyOfficialTemplateMap(true);
+    if (!result.ok) {
+        const missing = Array.isArray(result.missing) && result.missing.length
+            ? result.missing.join(', ')
+            : 'mapeamento incompleto';
+        alert(
+            'Nao foi possivel aplicar o modo rapido.\n' +
+            'Campos faltando: ' + missing + '\n\n' +
+            'Use "Usar template oficial" ou ajuste o mapeamento manual.'
+        );
+        return;
+    }
+    applyMap();
+}
+
+function applyMap() {
+    const fields = system === 'react' ? FIELDS_REACT : FIELDS_GAME;
+    colMap = {};
+    fields.forEach(f => {
+        const sel = document.getElementById(`cm_${f.key}`);
+        colMap[f.key] = sel ? parseInt(sel.value) : -1;
+    });
+    const missing = fields.filter(f => f.req && colMap[f.key] === -1).map(f => f.label);
+    if (system === 'react') {
+        const hasAltJSON = colMap['alt_json'] !== -1;
+        const hasAltABCD = ['alt_a', 'alt_b', 'alt_c', 'alt_d'].every((k) => colMap[k] !== -1);
+        if (!hasAltJSON && !hasAltABCD) {
+            missing.push('Alternativas JSON ou A/B/C/D');
+        }
+    }
+    if (missing.length) { alert('Campos obrigatorios sem coluna:\n' + missing.join('\n')); return; }
+
+    // Evita mapeamento repetido em campos críticos (erro comum que gera alternativas incompletas)
+    const criticalKeys =
+        system === 'react'
+            ? ((colMap['alt_json'] !== -1)
+                ? ['enunciado', 'alt_json', 'gabarito']
+                : ['enunciado', 'alt_a', 'alt_b', 'alt_c', 'alt_d', 'gabarito'])
+            : ['enunciado', 'gabarito'];
+    const used = new Map();
+    const dups = [];
+    const keyLabel = {
+        enunciado: 'enunciado',
+        alt_json: 'alternativas JSON',
+        alt_a: 'Alternativa A',
+        alt_b: 'Alternativa B',
+        alt_c: 'Alternativa C',
+        alt_d: 'Alternativa D',
+        gabarito: 'gabarito'
+    };
+    criticalKeys.forEach((k) => {
+        const idx = colMap[k];
+        if (idx === -1) return;
+        if (used.has(idx)) {
+            const atual = keyLabel[k] || k;
+            const anteriorKey = used.get(idx);
+            const anterior = keyLabel[anteriorKey] || anteriorKey;
+            dups.push(`${atual} repete coluna de ${anterior}`);
+        } else {
+            used.set(idx, k);
+        }
+    });
+    if (dups.length) {
+        alert(
+            'Mapeamento com colunas repetidas em campos críticos:\\n' +
+            dups.join('\\n') +
+            '\\n\\nAjuste antes de continuar.'
+        );
+        return;
+    }
+
+    buildRows();
+    renderPreview();
+    show('stepPreview');
+    document.getElementById('stepPreview').scrollIntoView({ behavior:'smooth' });
+}
+
+// ==============================
+// CONSTRUIR LINHAS
+// ==============================
+function cell(row, key) {
+    const i = colMap[key];
+    return (i === undefined || i === -1) ? '' : String(row[i] ?? '').trim();
+}
+
+function hashStr(s) {
+    let h = 0;
+    for (let i = 0; i < Math.min(s.length, 120); i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+    return Math.abs(h).toString(36).padStart(7, '0');
+}
+
+function parseGabarito(raw) {
+    const r = norm(raw).replace(/[^a-z0-9]/g,'');
+    if (['certo','verdadeiro','true','sim','1','v','c','correto'].includes(r)) return true;
+    if (['errado','falso','false','nao','0','f','e','incorreto'].includes(r)) return false;
+    return null;
+}
+
+function parseAlternativasJSON(raw) {
+    if (raw === null || raw === undefined || raw === '') return null;
+    let obj = raw;
+    if (typeof raw === 'string') {
+        const txt = raw.trim();
+        if (!txt) return null;
+        try {
+            obj = JSON.parse(txt);
+        } catch {
+            return '__invalid__';
+        }
+    }
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return '__invalid__';
+    const getVal = (k) => {
+        const v = obj[k] ?? obj[k.toUpperCase()] ?? obj[k.toLowerCase()];
+        return v === undefined || v === null ? '' : String(v).trim();
+    };
+    const A = getVal('A');
+    const B = getVal('B');
+    const C = getVal('C');
+    const D = getVal('D');
+    const E = getVal('E');
+    if (!A || !B || !C || !D) return '__invalid__';
+    return { A, B, C, D, E };
+}
+
+function buildRows() {
+    mappedRows = [];
+    const globalCfg = system === 'react' ? getReactCfg() : null;
+
+    excelRows.forEach((row, idx) => {
+        const enunciado  = cell(row, 'enunciado');
+        const explicacao = cell(row, 'explicacao') || null;
+        const banca      = cell(row, 'banca')  || null;
+        const anoS       = cell(row, 'ano');
+        const ano        = anoS ? parseInt(anoS) || null : null;
+        const cargo      = cell(row, 'cargo')  || null;
+
+        if (system === 'react') {
+            const altJsonRaw = cell(row, 'alt_json');
+            const altParsed  = parseAlternativasJSON(altJsonRaw);
+            const useJsonAlt = colMap['alt_json'] !== -1 && altJsonRaw !== '';
+            const alt_a    = (altParsed && altParsed !== '__invalid__') ? altParsed.A : cell(row, 'alt_a');
+            const alt_b    = (altParsed && altParsed !== '__invalid__') ? altParsed.B : cell(row, 'alt_b');
+            const alt_c    = (altParsed && altParsed !== '__invalid__') ? altParsed.C : cell(row, 'alt_c');
+            const alt_d    = (altParsed && altParsed !== '__invalid__') ? altParsed.D : cell(row, 'alt_d');
+            const alt_e    = (altParsed && altParsed !== '__invalid__') ? altParsed.E : cell(row, 'alt_e');
+            const gabRaw   = cell(row, 'gabarito').toUpperCase().replace(/[^ABCDE]/g,'').charAt(0);
+
+            let cfg = { ...(globalCfg || {}) };
+            if (colMap['area_col'] !== -1) { const v = cell(row,'area_col'); if(v){ const m=treeData.find(t=>t.area.toLowerCase()===v.toLowerCase()); cfg.area_id=m?.area_id||slug(v); cfg.area=m?.area||v; } }
+            if (colMap['mat_col']  !== -1) { const v = cell(row,'mat_col');  if(v){ const m=treeData.find(t=>t.materia.toLowerCase()===v.toLowerCase()); cfg.materia_id=m?.materia_id||slug(v); cfg.materia=m?.materia||v; } }
+            if (colMap['top_col']  !== -1) { const v = cell(row,'top_col');  if(v){ const m=treeData.find(t=>t.topico_nome.toLowerCase()===v.toLowerCase()); cfg.topico=m?.topico||slug(v); cfg.topico_nome=m?.topico_nome||v; } }
+            if (!cfg.topico && cfg.materia_id) {
+                cfg.topico = cfg.materia_id;
+                cfg.topico_nome = cfg.materia || cfg.materia_id;
+            }
+
+            let id = cell(row,'id') || `${cfg.area_id||'x'}-${cfg.materia_id||'x'}-${cfg.topico||'x'}-${hashStr(enunciado)}`;
+            const erros = [];
+            if (!enunciado) erros.push('enunciado vazio');
+            if (!alt_a||!alt_b||!alt_c||!alt_d) erros.push('alternativas incompletas');
+            if (useJsonAlt && altParsed === '__invalid__') erros.push('alternativas JSON inválidas');
+            if (!gabRaw) erros.push('gabarito inválido');
+            if (!explicacao) erros.push('explicação vazia');
+            if (!cfg.area_id) erros.push('área não configurada');
+            if (!cfg.area) erros.push('nome da área não configurado');
+            if (!cfg.materia_id) erros.push('matéria não configurada');
+            if (!cfg.topico) erros.push('tópico não configurado');
+
+            const alternativas = {
+                A: alt_a,
+                B: alt_b,
+                C: alt_c,
+                D: alt_d,
+                E: alt_e || ''
+            };
+
+            mappedRows.push({
+                _row: idx + 2,
+                _erros: erros,
+                _valid: !erros.length,
+                _dup: false,
+                id,
+                enunciado,
+                alternativas,
+                gabarito: gabRaw,
+                area_id: cfg.area_id || null,
+                area: cfg.area || null,
+                materia_id: cfg.materia_id || null,
+                materia: cfg.materia || null,
+                topico: cfg.topico || null,
+                topico_nome: cfg.topico_nome || cfg.topico || null,
+                tipo_questao: 'multipla_escolha',
+                explicacao,
+                banca,
+                ano,
+                cargo,
+                origem_arquivo: 'excel_import'
+            });
+
+        } else {
+            const gabRaw   = cell(row, 'gabarito');
+            const gabarito = parseGabarito(gabRaw);
+            let area_id    = getGameAreaId();
+            let subject_id = document.getElementById('cfgGameSubject').value.trim() || null;
+            let theme_id   = document.getElementById('cfgGameTheme').value.trim() || null;
+            let dificuldade= document.getElementById('cfgGameDiff').value;
+
+            if (colMap['area_col'] !== -1) { const v=cell(row,'area_col'); if(v) area_id=slug(v); }
+            if (colMap['sub_col']  !== -1) { const v=cell(row,'sub_col');  if(v) subject_id=slug(v); }
+            if (colMap['theme_col']!== -1) { const v=cell(row,'theme_col'); if(v) theme_id=slug(v); }
+            if (colMap['dif_col']  !== -1) { const v=norm(cell(row,'dif_col')); if(['facil','easy'].includes(v)) dificuldade='facil'; else if(['dificil','hard'].includes(v)) dificuldade='dificil'; else if(v) dificuldade='medio'; }
+
+            let id = cell(row,'id') || `gq-${area_id||'x'}-${subject_id||'x'}-${hashStr(enunciado)}`;
+            const erros = [];
+            if (!enunciado) erros.push('enunciado vazio');
+            if (gabarito === null) erros.push(`gabarito inválido (${gabRaw})`);
+            if (!area_id) erros.push('área não configurada');
+
+            mappedRows.push({ _row:idx+2, _erros:erros, _valid:!erros.length, _dup:false, id, enunciado, gabarito, explicacao, area_id, subject_id, theme_id, dificuldade, banca, ano, cargo, status:'ativa' });
+        }
+    });
+}
+
+// ==============================
+// PASSO 6: PREVIEW
+// ==============================
+async function renderPreview() {
+    if (sb) {
+        const ids = mappedRows.filter(r=>r._valid).map(r=>r.id);
+        if (ids.length) {
+            const tbl = system === 'react' ? 'questoes_react_dados' : 'game_questions';
+            const { data } = await sb.from(tbl).select('id').in('id', ids.slice(0,500));
+            existingIds = new Set((data||[]).map(r=>r.id));
+            mappedRows.forEach(r => { r._dup = existingIds.has(r.id); });
+        }
+    }
+
+    const total  = mappedRows.length;
+    const valid  = mappedRows.filter(r=>r._valid&&!r._dup).length;
+    const dups   = mappedRows.filter(r=>r._valid&&r._dup).length;
+    const erros  = mappedRows.filter(r=>!r._valid).length;
+
+    document.getElementById('prevStats').innerHTML = `
+        <div class="prev-stat"><div class="val c-blue">${total}</div><div class="lbl">Total</div></div>
+        <div class="prev-stat"><div class="val c-green">${valid}</div><div class="lbl">Prontas</div></div>
+        <div class="prev-stat"><div class="val c-yellow">${dups}</div><div class="lbl">Duplicatas</div></div>
+        <div class="prev-stat"><div class="val c-red">${erros}</div><div class="lbl">Com Erros</div></div>
+    `;
+    document.getElementById('btnImport').textContent = `⚡ Importar ${valid} questões`;
+
+    const warns = [];
+    if (erros) warns.push(`⚠️ ${erros} linhas com erros serão ignoradas.`);
+    if (dups)  warns.push(`ℹ️ ${dups} já existem no banco (mesmo ID) e serão puladas.`);
+    document.getElementById('prevWarn').innerHTML = warns.length
+        ? `<div class="status-box status-warn">${warns.join(' ')}</div>`
+        : '';
+
+    if (system === 'react') {
+        document.getElementById('prevHead').innerHTML = '<tr><th>#</th><th>Status</th><th>Enunciado</th><th>Gabarito</th><th>Área</th><th>Tópico</th></tr>';
+        document.getElementById('prevBody').innerHTML = mappedRows.slice(0,50).map(r => {
+            const bdg = !r._valid ? `<span class="bdg bdg-err">ERRO</span> <small style="color:#94a3b8">${e(r._erros.join(', '))}</small>`
+                      : r._dup   ? `<span class="bdg bdg-dup">DUP</span>`
+                      : `<span class="bdg bdg-ok">OK</span>`;
+            return `<tr><td>${r._row}</td><td>${bdg}</td><td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e(r.enunciado.substring(0,70))}</td><td><span class="bdg bdg-gab">${e(r.gabarito||'')}</span></td><td>${e(r.area||'')}</td><td>${e(r.topico_nome||r.topico||'')}</td></tr>`;
+        }).join('');
+    } else {
+        document.getElementById('prevHead').innerHTML = '<tr><th>#</th><th>Status</th><th>Afirmação</th><th>Gabarito</th><th>Área</th><th>Dific.</th></tr>';
+        document.getElementById('prevBody').innerHTML = mappedRows.slice(0,50).map(r => {
+            const bdg = !r._valid ? `<span class="bdg bdg-err">ERRO</span> <small style="color:#94a3b8">${e(r._erros.join(', '))}</small>`
+                      : r._dup   ? `<span class="bdg bdg-dup">DUP</span>`
+                      : `<span class="bdg bdg-ok">OK</span>`;
+            const gab = r.gabarito === true ? '<span class="certo">CERTO ✓</span>' : r.gabarito === false ? '<span class="errado">ERRADO ✗</span>' : '<span style="color:#94a3b8">?</span>';
+            return `<tr><td>${r._row}</td><td>${bdg}</td><td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e(r.enunciado.substring(0,70))}</td><td>${gab}</td><td>${e(r.area_id||'')}</td><td>${e(r.dificuldade||'')}</td></tr>`;
+        }).join('');
+    }
+}
+
+// ==============================
+// PASSO 7: IMPORTAÇÃO
+// ==============================
+async function startImport() {
+    if (!sb) { alert('Conecte primeiro'); return; }
+    const toInsert = mappedRows.filter(r => r._valid && !r._dup);
+    if (!toInsert.length) { alert('Nenhuma questão válida para inserir.'); return; }
+    const tbl = system === 'react' ? 'questoes_react_dados' : 'game_questions';
+    const label = system === 'react' ? 'questões (A/B/C/D)' : 'afirmações (Certo/Errado)';
+    if (!confirm(`Importar ${toInsert.length} ${label} para ${tbl}?`)) return;
+
+    show('stepProgress');
+    hide('importDone');
+    document.getElementById('stepProgress').scrollIntoView({ behavior:'smooth' });
+    const logBox = document.getElementById('logBox');
+    logBox.innerHTML = '';
+    const log = (m, cls='log-info') => { logBox.innerHTML += `<div class="log-line ${cls}">${m}</div>`; logBox.scrollTop = logBox.scrollHeight; };
+
+    const BATCH = 50, total = toInsert.length;
+    let inserted = 0, failed = 0;
+    log(`📦 Iniciando: ${total} registros em lotes de ${BATCH}...`);
+
+    for (let i = 0; i < total; i += BATCH) {
+        const batch = toInsert.slice(i, i + BATCH);
+        const rows  = batch.map(r => {
+            const clean = {};
+            if (system === 'react') {
+                ['id','area_id','area','materia_id','materia','topico','topico_nome','tipo_questao','enunciado','alternativas','gabarito','explicacao','banca','ano','cargo','origem_arquivo'].forEach(k => {
+                    if (r[k] !== undefined) clean[k] = r[k];
+                });
+            } else {
+                ['id','enunciado','gabarito','explicacao','area_id','subject_id','theme_id','dificuldade','banca','ano','cargo','status'].forEach(k => {
+                    if (r[k] !== undefined) clean[k] = r[k];
+                });
+            }
+            return clean;
+        });
+
+        const { error } = await sb.from(tbl).upsert(rows, { onConflict:'id', ignoreDuplicates:true });
+        if (error) { log(`❌ Lote ${Math.floor(i/BATCH)+1}: ${error.message}`, 'log-err'); failed += batch.length; }
+        else { inserted += batch.length; log(`✅ Lote ${Math.floor(i/BATCH)+1}: ${batch.length} inseridos (${i+1}–${Math.min(i+BATCH,total)})`, 'log-ok'); }
+
+        const pct = Math.min(Math.round(((i+BATCH)/total)*100), 100);
+        document.getElementById('pBar').style.width = pct + '%';
+        document.getElementById('pBar').textContent = pct + '%';
+        document.getElementById('pText').textContent = `${Math.min(i+BATCH,total)} / ${total} processados...`;
+        await new Promise(r => setTimeout(r, 80));
+    }
+
+    document.getElementById('pBar').style.width = '100%';
+    document.getElementById('pBar').textContent = '100%';
+    document.getElementById('pText').textContent = 'Concluído!';
+    document.getElementById('progressTitle').textContent = '✅ Importação Concluída!';
+    log(`\n🎉 ${inserted} inseridos${failed ? `, ${failed} com erro` : ''}`, inserted > 0 ? 'log-ok' : 'log-warn');
+    show('importDone');
+}
+
+// ==============================
+// TEMPLATE EXCEL
+// ==============================
+function downloadTemplate() {
+    if (!system) { alert('Selecione o sistema primeiro (React ou Jogo 3D)'); return; }
+
+    const wb = XLSX.utils.book_new();
+
+    if (system === 'react') {
+        const reactABCD = [
+            ['id','enunciado','A','B','C','D','E','gabarito','explicacao','banca','ano','cargo','area','materia','topico'],
+            ['react-abcd-001','Sobre o conceito de ato administrativo, e correto afirmar:','Manifestacao bilateral da Administracao','Manifestacao unilateral da Administracao com efeitos juridicos','Ato jurisdicional do Poder Judiciario','Fato administrativo sem efeito juridico','','B','Conceito classico: ato administrativo e manifestacao unilateral com efeitos juridicos.','CESPE','2023','Analista','JURIDICA COMPLETO','Direito Administrativo','Atos administrativos'],
+            ['react-abcd-002','A autoexecutoriedade dos atos administrativos e:','Obrigatoria em todos os atos','Inexistente no direito brasileiro','Possivel em hipoteses legais','Sempre dependente de ordem judicial','','C','Nem todos os atos sao autoexecutorios; depende de previsao legal ou urgencia.','FCC','2023','Procurador','JURIDICA COMPLETO','Direito Administrativo','Atributos']
+        ];
+        const wsABCD = XLSX.utils.aoa_to_sheet(reactABCD);
+        wsABCD['!cols'] = [{wch:18},{wch:66},{wch:36},{wch:36},{wch:36},{wch:36},{wch:24},{wch:12},{wch:66},{wch:10},{wch:8},{wch:26},{wch:24},{wch:28},{wch:28}];
+        XLSX.utils.book_append_sheet(wb, wsABCD, 'React_ABCD');
+
+        const reactJSON = [
+            ['id','enunciado','alternativas','gabarito','explicacao','banca','ano','cargo','area','materia','topico'],
+            ['react-json-001','Quanto aos elementos do ato administrativo, assinale a correta.','{\"A\":\"Competencia e sempre discricionaria\",\"B\":\"Finalidade pode ser livre\",\"C\":\"Forma nao e essencial\",\"D\":\"Competencia, finalidade, forma, motivo e objeto\"}','D','Elementos classicos: competencia, finalidade, forma, motivo e objeto.','VUNESP','2022','Analista Judiciario','JURIDICA COMPLETO','Direito Administrativo','Elementos'],
+            ['react-json-002','A presuncao de legitimidade dos atos administrativos e:','{\"A\":\"Absoluta\",\"B\":\"Relativa (juris tantum)\",\"C\":\"Inexistente\",\"D\":\"Apenas para atos vinculados\",\"E\":\"Apenas para atos discricionarios\"}','B','A presuncao de legitimidade admite prova em contrario.','CESPE','2024','Analista','JURIDICA COMPLETO','Direito Administrativo','Atributos']
+        ];
+        const wsJSON = XLSX.utils.aoa_to_sheet(reactJSON);
+        wsJSON['!cols'] = [{wch:18},{wch:66},{wch:96},{wch:12},{wch:66},{wch:10},{wch:8},{wch:26},{wch:24},{wch:28},{wch:28}];
+        XLSX.utils.book_append_sheet(wb, wsJSON, 'React_JSON');
+
+        const infoReact = [
+            ['GUIA REACT - IMPORTACAO EXCEL'],
+            [''],
+            ['FORMATOS ACEITOS'],
+            ['1) React_ABCD: enunciado + A/B/C/D (+E opcional) + gabarito + explicacao'],
+            ['2) React_JSON: enunciado + alternativas(JSON) + gabarito + explicacao'],
+            [''],
+            ['REGRAS OBRIGATORIAS'],
+            ['- Enunciado, gabarito e explicacao sao obrigatorios.'],
+            ['- Gabarito deve ser A, B, C, D ou E.'],
+            ['- Se usar alternativas JSON, A/B/C/D sao obrigatorias; E opcional.'],
+            ['- Linha 1 deve ser cabecalho (sem coluna vazia).'],
+            [''],
+            ['COLUNAS OPCIONAIS'],
+            ['- banca, ano, cargo'],
+            ['- area, materia, topico (se nao enviar, usa Configuracao Global da tela)'],
+            [''],
+            ['DICA PARA PLANILHA GERADA POR IA/FIGMA'],
+            ['- Padronize nomes de colunas exatamente como no template.'],
+            ['- Evite JSON com aspas simples; use aspas duplas.'],
+            ['- Revise 5 linhas no preview antes de importar em massa.']
+        ];
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(infoReact), 'Instrucoes');
+        XLSX.writeFile(wb, 'template-questoes-react.xlsx');
+    } else {
+        const gameData = [
+            ['id','enunciado','gabarito','explicacao','area_id','subject_id','theme_id','dificuldade','banca','ano','cargo'],
+            ['gq-001','A CF/88 e conhecida como Constituicao Cidada.','certo','Expressao usada por Ulysses Guimaraes na promulgacao.','juridica','direito-constitucional','principios-gerais','facil','CESPE','2024','Analista'],
+            ['gq-002','Todos os atos administrativos possuem autoexecutoriedade.','errado','Nem todos possuem; depende de previsao legal ou urgencia.','juridica','direito-administrativo','atributos','medio','FCC','2023','Procurador'],
+            ['','A administracao publica pode anular seus proprios atos ilegais.','certo','Autotutela (sumulas 346 e 473 do STF).','juridica','direito-administrativo','autotutela','medio','VUNESP','2022','Analista']
+        ];
+        const ws = XLSX.utils.aoa_to_sheet(gameData);
+        ws['!cols'] = [{wch:18},{wch:70},{wch:12},{wch:66},{wch:22},{wch:28},{wch:24},{wch:12},{wch:10},{wch:8},{wch:24}];
+        XLSX.utils.book_append_sheet(wb, ws, 'Game_3D');
+
+        const infoGame = [
+            ['GUIA GAME 3D - IMPORTACAO EXCEL'],
+            [''],
+            ['COLUNAS OBRIGATORIAS'],
+            ['- enunciado'],
+            ['- gabarito (certo/errado, true/false, 1/0, v/f)'],
+            [''],
+            ['COLUNAS OPCIONAIS'],
+            ['- explicacao, area_id, subject_id, theme_id, dificuldade, banca, ano, cargo'],
+            ['- Se area_id nao vier no Excel, usa a Configuracao Global da tela'],
+            [''],
+            ['REGRAS'],
+            ['- dificuldade aceita: facil, medio, dificil'],
+            ['- Linha 1 deve ser cabecalho'],
+            ['- Revise preview antes de importar']
+        ];
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(infoGame), 'Instrucoes');
+        XLSX.writeFile(wb, 'template-questoes-game.xlsx');
+    }
+}
+
+// ==============================
+// UTILITÁRIOS
+// ==============================
+function show(id) { document.getElementById(id).classList.remove('hidden'); }
+function hide(id) { document.getElementById(id).classList.add('hidden'); }
+function e(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function norm(s) { return String(s||'').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
+function slug(s) { return norm(s).replace(/\s+/g,'-').replace(/-+/g,'-'); }
+function msg(id, type, text) {
+    const cls = {ok:'status-ok',err:'status-err',info:'status-info',warn:'status-warn'}[type]||'status-info';
+    document.getElementById(id).innerHTML = `<div class="status-box ${cls}">${text}</div>`;
+}
+
+function resetAll() {
+    excelHeaders=[]; excelRows=[]; colMap={}; mappedRows=[];
+    document.getElementById('fileInput').value = '';
+    ['stepMap','stepPreview','stepProgress','quickActions'].forEach(id => hide(id));
+    msg('fileMsg','info','');
+}
+
+window.onload = () => {
+    const k = localStorage.getItem('quiron_service_key');
+    if (k) document.getElementById('serviceKey').value = k;
+};
+</script>
+</body>
+</html>
+
+

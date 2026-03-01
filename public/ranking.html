@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ranking Global - Quiron</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: white; min-height: 100vh; }
+        
+        .header {
+            background: #1e293b; padding: 15px 30px; display: flex; justify-content: space-between;
+            align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top: 0; z-index: 100;
+        }
+        .header h1 { font-size: 20px; color: #f59e0b; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
+        
+        .btn { padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: none; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #cbd5e1; transition: 0.2s; }
+        .btn:hover { background: rgba(255,255,255,0.1); color: white; }
+
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+
+        .podium {
+            display: flex; justify-content: center; align-items: flex-end; gap: 15px; margin-bottom: 40px; margin-top: 20px;
+        }
+
+        .podium-item {
+            text-align: center; display: flex; flex-direction: column; align-items: center;
+        }
+
+        .avatar {
+            width: 60px; height: 60px; rounded-full; background: #334155; border: 3px solid; margin-bottom: 10px;
+            display: flex; align-items: center; justify-content: center; font-size: 24px; position: relative;
+        }
+        
+        .rank-1 .avatar { width: 90px; height: 90px; border-color: #f59e0b; box-shadow: 0 0 30px rgba(245, 158, 11, 0.3); z-index: 10; }
+        .rank-2 .avatar { width: 70px; height: 70px; border-color: #94a3b8; }
+        .rank-3 .avatar { width: 70px; height: 70px; border-color: #b45309; }
+
+        .bar { width: 80px; border-radius: 10px 10px 0 0; position: relative; }
+        .rank-1 .bar { height: 160px; background: linear-gradient(to top, #f59e0b, #fbbf24); }
+        .rank-2 .bar { height: 110px; background: linear-gradient(to top, #64748b, #94a3b8); }
+        .rank-3 .bar { height: 90px; background: linear-gradient(to top, #78350f, #b45309); }
+
+        .rank-num {
+            position: absolute; top: -35px; left: 50%; transform: translateX(-50%);
+            font-size: 24px; font-weight: 900;
+        }
+
+        .player-name { font-weight: 700; margin-top: 10px; font-size: 14px; max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .player-score { color: #f59e0b; font-size: 12px; font-weight: 700; }
+
+        .list-card {
+            background: #1e293b; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden;
+        }
+
+        .list-item {
+            display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05);
+            transition: 0.2s;
+        }
+        .list-item:hover { background: rgba(255,255,255,0.02); }
+        .list-item:last-child { border-bottom: none; }
+
+        .item-rank { width: 40px; font-size: 16px; font-weight: 900; color: #64748b; }
+        .item-info { flex: 1; }
+        .item-name { font-weight: 700; font-size: 14px; }
+        .item-area { font-size: 11px; color: #94a3b8; }
+        .item-score { font-weight: 900; color: #f59e0b; font-size: 16px; }
+
+        .tabs { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; scrollbar-width: none; }
+        .tab { 
+            padding: 8px 16px; border-radius: 20px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); 
+            color: #94a3b8; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;
+        }
+        .tab.active { background: #f59e0b; color: white; border-color: #f59e0b; }
+
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><span>🏆</span> RANKING DOS APROVADOS</h1>
+        <button class="btn" onclick="location.href='dashboard.html'">VOLTAR</button>
+    </div>
+
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" onclick="filterRank('all', this)">🌍 Geral</div>
+            <div class="tab" onclick="filterRank('policia', this)">🚔 Policial</div>
+            <div class="tab" onclick="filterRank('juridica', this)">⚖️ Jurídica</div>
+            <div class="tab" onclick="filterRank('fiscal', this)">📊 Fiscal</div>
+        </div>
+
+        <div id="podium" class="podium">
+            <!-- Injetado via JS -->
+        </div>
+
+        <div class="list-card" id="rankingList">
+            <!-- Injetado via JS -->
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+    <script>
+        // Mock de dados para demonstração (substituir por fetch real do Supabase)
+        const MOCK_DATA = [
+            { id: 1, name: 'Guerreiro #01', area: 'policia', score: 1540, avatar: '👮' },
+            { id: 2, name: 'Magistrada', area: 'juridica', score: 1420, avatar: '⚖️' },
+            { id: 3, name: 'Auditor_F', area: 'fiscal', score: 1350, avatar: '📈' },
+            { id: 4, name: 'Delta Force', area: 'policia', score: 1200, avatar: '🚔' },
+            { id: 5, name: 'Estudante Focado', area: 'geral', score: 1100, avatar: '📚' },
+            { id: 6, name: 'Futuro PF', area: 'policia', score: 980, avatar: '🔫' },
+            { id: 7, name: 'Advogado Jr', area: 'juridica', score: 850, avatar: '💼' },
+        ];
+
+        let currentFilter = 'all';
+
+        function render() {
+            const data = MOCK_DATA
+                .filter(p => currentFilter === 'all' || p.area === currentFilter)
+                .sort((a, b) => b.score - a.score);
+
+            const podiumEl = document.getElementById('podium');
+            const listEl = document.getElementById('rankingList');
+            
+            // Render Podium (Top 3)
+            if (data.length >= 3) {
+                podiumEl.innerHTML = `
+                    <div class="podium-item rank-2">
+                        <div class="avatar">${data[1].avatar}</div>
+                        <div class="player-name">${data[1].name}</div>
+                        <div class="player-score">${data[1].score} XP</div>
+                        <div class="bar"><span class="rank-num">🥈</span></div>
+                    </div>
+                    <div class="podium-item rank-1">
+                        <div class="avatar">${data[0].avatar}</div>
+                        <div class="player-name">${data[0].name}</div>
+                        <div class="player-score">${data[0].score} XP</div>
+                        <div class="bar"><span class="rank-num">🥇</span></div>
+                    </div>
+                    <div class="podium-item rank-3">
+                        <div class="avatar">${data[2].avatar}</div>
+                        <div class="player-name">${data[2].name}</div>
+                        <div class="player-score">${data[2].score} XP</div>
+                        <div class="bar"><span class="rank-num">🥉</span></div>
+                    </div>
+                `;
+            } else {
+                podiumEl.innerHTML = '<div style="opacity:0.5;">Jogue para aparecer no pódio!</div>';
+            }
+
+            // Render List (Resto)
+            listEl.innerHTML = data.slice(3).map((p, i) => `
+                <div class="list-item">
+                    <div class="item-rank">#${i + 4}</div>
+                    <div class="item-info">
+                        <div class="item-name">${p.name}</div>
+                        <div class="item-area">${p.area.toUpperCase()}</div>
+                    </div>
+                    <div class="item-score">${p.score}</div>
+                </div>
+            `).join('');
+        }
+
+        function filterRank(filter, el) {
+            currentFilter = filter;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            render();
+        }
+
+        render();
+    </script>
+</body>
+</html>

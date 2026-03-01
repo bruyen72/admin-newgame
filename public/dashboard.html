@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiron Admin Dashboard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Space+Grotesk:wght@600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #f4f7fc;
+            --bg-soft: #eaf0fb;
+            --ink: #0f172a;
+            --muted: #5b6b84;
+            --line: #d6e0f1;
+            --panel: #ffffff;
+            --blue: #2563eb;
+            --cyan: #0ea5e9;
+            --emerald: #10b981;
+            --amber: #f59e0b;
+            --violet: #7c3aed;
+        }
+
+        body {
+            font-family: 'Manrope', sans-serif;
+            color: var(--ink);
+            min-height: 100vh;
+            background:
+                radial-gradient(900px 450px at -10% -10%, #d6e6ff 0%, transparent 50%),
+                radial-gradient(700px 350px at 110% 0%, #d8f5ee 0%, transparent 50%),
+                linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+        }
+
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: rgba(248, 251, 255, 0.9);
+            border-bottom: 1px solid var(--line);
+            backdrop-filter: blur(8px);
+        }
+
+        .topbar-inner {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .brand-mark {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #2563eb 0%, #06b6d4 100%);
+            box-shadow: 0 8px 16px rgba(37, 99, 235, 0.28);
+        }
+
+        .brand h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 18px;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+        }
+
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 12px;
+            font-weight: 800;
+            text-decoration: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+        }
+        .btn:hover { transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+
+        .btn-main {
+            color: #fff;
+            background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+            box-shadow: 0 8px 16px rgba(37, 99, 235, 0.26);
+        }
+
+        .btn-soft {
+            color: #1e293b;
+            background: #e9effb;
+            border: 1px solid #d2ddf2;
+        }
+
+        .btn-danger {
+            color: #fff;
+            background: #ef4444;
+        }
+
+        .container {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 20px 18px 30px;
+        }
+
+        .hero {
+            border-radius: 18px;
+            background:
+                linear-gradient(135deg, rgba(37, 99, 235, 0.96) 0%, rgba(14, 165, 233, 0.96) 45%, rgba(16, 185, 129, 0.92) 100%);
+            color: #fff;
+            padding: 20px;
+            box-shadow: 0 20px 36px rgba(16, 70, 153, 0.28);
+            margin-bottom: 14px;
+        }
+
+        .hero h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 26px;
+            margin-bottom: 7px;
+        }
+
+        .hero p {
+            color: rgba(241, 245, 249, 0.95);
+            font-size: 14px;
+            line-height: 1.65;
+            max-width: 900px;
+        }
+
+        .hero-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .hero-tag {
+            border-radius: 999px;
+            padding: 7px 10px;
+            font-size: 11px;
+            font-weight: 800;
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .stat {
+            border-radius: 14px;
+            padding: 14px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+        }
+
+        .stat .k {
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+        }
+
+        .stat .v {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 29px;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+
+        .panel {
+            border-radius: 16px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
+            padding: 16px;
+            margin-bottom: 14px;
+        }
+
+        .panel-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .panel-head h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 18px;
+        }
+
+        .panel-head small {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .areas-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .area-card {
+            border-radius: 14px;
+            padding: 12px;
+            border: 1px solid #d6e0f1;
+            background: #f8fbff;
+        }
+
+        .area-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .area-title strong {
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .area-title span {
+            font-size: 18px;
+        }
+
+        .meter-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .meter {
+            border-radius: 10px;
+            padding: 9px;
+            border: 1px solid #d6e0f1;
+            background: #fff;
+        }
+
+        .meter.game {
+            background: #ecfdf5;
+            border-color: #a7f3d0;
+        }
+
+        .meter .label {
+            font-size: 10px;
+            font-weight: 800;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .meter .num {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .list {
+            display: grid;
+            gap: 8px;
+        }
+
+        .list-item {
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            background: #f8fbff;
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .list-item strong { font-size: 13px; }
+        .list-item span { font-size: 12px; color: var(--muted); }
+
+        .badge {
+            border-radius: 999px;
+            padding: 4px 8px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+        }
+
+        .b-ok { background: #dcfce7; color: #166534; }
+        .b-info { background: #dbeafe; color: #1d4ed8; }
+        .b-warn { background: #fef3c7; color: #92400e; }
+
+        .enem-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .enem-card {
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: #f8fbff;
+            padding: 12px;
+            text-decoration: none;
+            color: inherit;
+            transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+        }
+
+        .enem-card:hover {
+            transform: translateY(-1px);
+            border-color: #9cb6e6;
+            box-shadow: 0 10px 18px rgba(37, 99, 235, 0.08);
+        }
+
+        .enem-card h4 {
+            font-size: 14px;
+            margin-bottom: 6px;
+            color: #1e3a8a;
+        }
+
+        .enem-card p {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .footer-note {
+            text-align: center;
+            color: #7a8ca9;
+            font-size: 12px;
+            padding: 4px 0 0;
+        }
+
+        @media (max-width: 1060px) {
+            .stats-grid, .enem-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 740px) {
+            .stats-grid, .enem-grid, .areas-grid { grid-template-columns: 1fr; }
+            .topbar-inner { flex-direction: column; align-items: flex-start; }
+            .top-actions { width: 100%; justify-content: flex-start; }
+            .hero h2 { font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="topbar-inner">
+            <div class="brand">
+                <div class="brand-mark">Q</div>
+                <h1>QUIRON ADMIN DASHBOARD</h1>
+            </div>
+            <div class="top-actions">
+                <a class="btn btn-main" href="importar.html">Importar Excel</a>
+                <a class="btn btn-soft" href="questoes-react.html">React App</a>
+                <a class="btn btn-soft" href="questoes-game.html">Game 3D</a>
+                <a class="btn btn-soft" href="nova-questao.html">Nova Questao</a>
+                <button class="btn btn-danger" onclick="logout()">Sair</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <h2>Painel de Operacao</h2>
+            <p>
+                Controle central para ENEM e concursos: importacao em massa, revisao rapida do React App e monitoramento do Game 3D com areas prontas.
+            </p>
+            <div class="hero-tags">
+                <span class="hero-tag">ENEM</span>
+                <span class="hero-tag">Concurso Publico</span>
+                <span class="hero-tag">React + Game 3D</span>
+                <span class="hero-tag">Importacao Excel</span>
+            </div>
+        </section>
+
+        <section class="stats-grid">
+            <div class="stat"><div class="k">React App</div><div class="v" id="statReact">-</div></div>
+            <div class="stat"><div class="k">Game 3D</div><div class="v" id="statGame">-</div></div>
+            <div class="stat"><div class="k">Total Geral</div><div class="v" id="statTotal">-</div></div>
+            <div class="stat"><div class="k">Atualizado</div><div class="v" id="statUpdated" style="font-size:18px">--:--:--</div></div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-head">
+                <h3>Areas prontas de Concurso</h3>
+                <small>Contagem por area (React + Game)</small>
+            </div>
+            <div class="areas-grid">
+                <article class="area-card">
+                    <div class="area-title"><strong>Area Juridica</strong><span>⚖️</span></div>
+                    <div class="meter-grid">
+                        <div class="meter"><div class="label">React</div><div class="num" id="area-juridica-react">0</div></div>
+                        <div class="meter game"><div class="label">Game</div><div class="num" id="area-juridica-game">0</div></div>
+                    </div>
+                </article>
+                <article class="area-card">
+                    <div class="area-title"><strong>Area Policial</strong><span>🚓</span></div>
+                    <div class="meter-grid">
+                        <div class="meter"><div class="label">React</div><div class="num" id="area-policial-react">0</div></div>
+                        <div class="meter game"><div class="label">Game</div><div class="num" id="area-policial-game">0</div></div>
+                    </div>
+                </article>
+                <article class="area-card">
+                    <div class="area-title"><strong>Fiscal Bancaria</strong><span>🏦</span></div>
+                    <div class="meter-grid">
+                        <div class="meter"><div class="label">React</div><div class="num" id="area-fiscal-bancaria-react">0</div></div>
+                        <div class="meter game"><div class="label">Game</div><div class="num" id="area-fiscal-bancaria-game">0</div></div>
+                    </div>
+                </article>
+                <article class="area-card">
+                    <div class="area-title"><strong>Conhecimentos Gerais</strong><span>📚</span></div>
+                    <div class="meter-grid">
+                        <div class="meter"><div class="label">React</div><div class="num" id="area-conhecimentos-gerais-react">0</div></div>
+                        <div class="meter game"><div class="label">Game</div><div class="num" id="area-conhecimentos-gerais-game">0</div></div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="grid-2">
+            <article class="panel">
+                <div class="panel-head">
+                    <h3>Trilhas estilo ENEM</h3>
+                    <small>Atalhos de organizacao pedagogica no React App</small>
+                </div>
+                <div class="enem-grid">
+                    <a class="enem-card" href="questoes-react.html"><h4>Linguagens</h4><p>Portugues, literatura e interpretacao.</p></a>
+                    <a class="enem-card" href="questoes-react.html"><h4>Humanas</h4><p>Historia, geografia, filosofia e sociologia.</p></a>
+                    <a class="enem-card" href="questoes-react.html"><h4>Natureza</h4><p>Biologia, fisica e quimica.</p></a>
+                    <a class="enem-card" href="questoes-react.html"><h4>Matematica</h4><p>Raciocinio quantitativo e problemas.</p></a>
+                </div>
+            </article>
+
+            <aside class="panel">
+                <div class="panel-head">
+                    <h3>Status operacional</h3>
+                    <small>Monitoramento rapido</small>
+                </div>
+                <div class="list">
+                    <div class="list-item"><div><strong>Importador Excel</strong><span>Fluxo com preview ativo</span></div><span class="badge b-ok">online</span></div>
+                    <div class="list-item"><div><strong>React App</strong><span>Banco questoes_react_dados</span></div><span class="badge b-info">ok</span></div>
+                    <div class="list-item"><div><strong>Game 3D</strong><span>Banco game_questions</span></div><span class="badge b-info">ok</span></div>
+                    <div class="list-item"><div><strong>Modo seguro</strong><span>Sem CRUD de area no dashboard</span></div><span class="badge b-warn">fixo</span></div>
+                </div>
+            </aside>
+        </section>
+
+        <div class="footer-note">Dashboard focado em operacao, sem mudanca estrutural de areas.</div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+    <script>
+        if (localStorage.getItem('quiron_admin_logged') !== 'true') {
+            location.href = 'index.html';
+        }
+
+        const SUPABASE_URL = 'https://lrmabyfaunhrdvdzocrz.supabase.co';
+        const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxybWFieWZhdW5ocmR2ZHpvY3J6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzM0NDg0NSwiZXhwIjoyMDc4OTIwODQ1fQ.itx7jK0e5J6AwR7Q_uRx4rsQfZzTay9qzL5VTOMOh4I'.trim();
+        const sb = window.supabase.createClient(SUPABASE_URL, KEY);
+
+        const AREA_KEYS = ['juridica', 'policial', 'fiscal-bancaria', 'conhecimentos-gerais'];
+
+        function logout() {
+            localStorage.removeItem('quiron_admin_logged');
+            location.href = 'index.html';
+        }
+
+        function norm(s) {
+            return String(s || '')
+                .toLowerCase()
+                .trim()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9 ]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function normalizeAreaKey(value) {
+            const v = norm(value).replace(/_/g, '-');
+            if (!v) return '';
+            if (v.includes('jurid')) return 'juridica';
+            if (v.includes('polic')) return 'policial';
+            if (v.includes('fiscal') || v.includes('banc')) return 'fiscal-bancaria';
+            if (v.includes('conhecimento') || v.includes('gerais') || v.includes('geral')) return 'conhecimentos-gerais';
+            return '';
+        }
+
+        function setText(id, value) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        }
+
+        async function fetchPagedColumnCounts(table, columnName, normalizer) {
+            const out = {};
+            let from = 0;
+            const chunk = 1000;
+
+            for (;;) {
+                const { data, error } = await sb
+                    .from(table)
+                    .select(columnName)
+                    .not(columnName, 'is', null)
+                    .range(from, from + chunk - 1);
+
+                if (error) throw error;
+                if (!data || data.length === 0) break;
+
+                data.forEach((row) => {
+                    const key = normalizer(row[columnName]);
+                    if (!key) return;
+                    out[key] = (out[key] || 0) + 1;
+                });
+
+                if (data.length < chunk) break;
+                from += chunk;
+            }
+            return out;
+        }
+
+        async function loadStats() {
+            try {
+                setText('statReact', '...');
+                setText('statGame', '...');
+                setText('statTotal', '...');
+
+                const [{ count: reactCount, error: e1 }, { count: gameCount, error: e2 }] = await Promise.all([
+                    sb.from('questoes_react_dados').select('*', { count: 'exact', head: true }),
+                    sb.from('game_questions').select('*', { count: 'exact', head: true })
+                ]);
+                if (e1) throw e1;
+                if (e2) throw e2;
+
+                const [reactByArea, gameByArea] = await Promise.all([
+                    fetchPagedColumnCounts('questoes_react_dados', 'area', normalizeAreaKey),
+                    fetchPagedColumnCounts('game_questions', 'area_id', normalizeAreaKey)
+                ]);
+
+                setText('statReact', (reactCount || 0).toLocaleString('pt-BR'));
+                setText('statGame', (gameCount || 0).toLocaleString('pt-BR'));
+                setText('statTotal', ((reactCount || 0) + (gameCount || 0)).toLocaleString('pt-BR'));
+                setText('statUpdated', new Date().toLocaleTimeString('pt-BR'));
+
+                AREA_KEYS.forEach((k) => {
+                    setText(`area-${k}-react`, (reactByArea[k] || 0).toLocaleString('pt-BR'));
+                    setText(`area-${k}-game`, (gameByArea[k] || 0).toLocaleString('pt-BR'));
+                });
+            } catch (err) {
+                console.error(err);
+                setText('statReact', 'erro');
+                setText('statGame', 'erro');
+                setText('statTotal', 'erro');
+                setText('statUpdated', '--:--:--');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadStats);
+    </script>
+</body>
+</html>
